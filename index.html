@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ganja Farmer Patcher</title>
+<meta name="description" content="Biegt die originale Ganja-Farmer-APK auf einen Community-Server um, direkt im Browser.">
+<style>
+  :root {
+    --bg: #f4f1e8; --card: #fffdf7; --text: #23261f; --muted: #66695f;
+    --accent: #3f7d20; --accent-text: #fff; --border: #d9d4c3; --error: #b3261e;
+    --drop: #eef3e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161813; --card: #20231c; --text: #e8e9e2; --muted: #a2a597;
+      --accent: #7cc24e; --accent-text: #10140c; --border: #383c31; --error: #ff8a80;
+      --drop: #242a1d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  .lead { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .drop {
+    display: block; border: 2px dashed var(--border); border-radius: 12px;
+    background: var(--drop); padding: 28px 16px; text-align: center; cursor: pointer;
+  }
+  .drop.over { border-color: var(--accent); }
+  .drop strong { display: block; font-size: 1.05rem; }
+  .drop small { color: var(--muted); }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .status { margin-top: 16px; min-height: 1.5em; }
+  .status.error { color: var(--error); font-weight: 600; }
+  progress { width: 100%; height: 10px; accent-color: var(--accent); margin-top: 8px; }
+  .btn {
+    display: inline-block; margin-top: 16px; padding: 12px 20px; border-radius: 10px;
+    background: var(--accent); color: var(--accent-text); font-weight: 700;
+    text-decoration: none;
+  }
+  ol, ul { padding-left: 1.3em; margin: 0; }
+  li + li { margin-top: 6px; }
+  footer { color: var(--muted); font-size: 0.85rem; margin-top: 24px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🌱 Ganja Farmer Patcher</h1>
+  <p class="lead">
+    Der Originalserver von Ganja Farmer ist abgeschaltet. Dieser Patcher stellt
+    deine Original-APK auf einen Community-Server um, damit das Spiel wieder läuft.
+    Alles passiert <strong>in deinem Browser</strong>, die Datei wird nirgendwo hochgeladen.
+  </p>
+
+  <section class="card">
+    <h2>1. Original-APK auswählen</h2>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".apk,application/vnd.android.package-archive">
+      <strong>APK hier ablegen oder antippen</strong>
+      <small>Ganja Farmer, Version 147, als einzelne .apk-Datei</small>
+    </label>
+    <div class="status" id="status" aria-live="polite"></div>
+    <progress id="progress" max="1" value="0" hidden></progress>
+    <a class="btn" id="download" hidden>⬇ Gepatchte APK herunterladen</a>
+  </section>
+
+  <section class="card">
+    <h2>2. Installieren</h2>
+    <ol>
+      <li>Falls die alte Original-Version installiert ist: <strong>erst deinstallieren</strong>
+        (die gepatchte APK hat eine andere Signatur).</li>
+      <li>Heruntergeladene APK öffnen und die Installation aus unbekannten Quellen erlauben.</li>
+      <li><strong>Samsung:</strong> Falls die Installation blockiert wird, unter
+        Einstellungen → Sicherheit den <em>Auto Blocker</em> vorübergehend ausschalten.</li>
+      <li>Auf neueren Geräten erscheint beim Start ein Hinweis
+        „This app isn't 16 KB compatible…". Einfach mit <em>OK</em> bestätigen, das Spiel
+        läuft dann im Kompatibilitätsmodus.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Gut zu wissen</h2>
+    <ul>
+      <li>Läuft ab Android 7.</li>
+      <li>Dein Spielstand liegt auf dem Server und gehört zu deiner Installation.
+        Updates mit diesem Patcher behalten ihn, eine Neuinstallation startet ein neues Spiel.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Inoffizielles Fanprojekt, nicht verbunden mit den Entwicklern von Ganja Farmer.
+    Es wird keine APK bereitgestellt, nur deine eigene Datei verändert.
+  </footer>
+</main>
+
+<script type="module">
+  import { patchApk, PatchError } from './apkpatch.js';
+
+  const $ = (id) => document.getElementById(id);
+  const status = $('status'), progress = $('progress'), download = $('download'), drop = $('drop');
+  let busy = false;
+
+  function show(text, isError = false) {
+    status.textContent = text;
+    status.classList.toggle('error', isError);
+  }
+
+  if (!window.isSecureContext || !crypto.subtle || typeof CompressionStream === 'undefined') {
+    show('Dein Browser ist zu alt für den Patcher. Bitte einen aktuellen Chrome, Firefox oder Safari verwenden.', true);
+  }
+
+  async function handle(file) {
+    if (!file || busy) return;
+    busy = true;
+    download.hidden = true;
+    if (download.href) URL.revokeObjectURL(download.href);
+    progress.hidden = false;
+    progress.value = 0;
+    try {
+      show(`${file.name} (${(file.size / 1e6).toFixed(1)} MB) wird gelesen …`);
+      const blob = await patchApk(await file.arrayBuffer(), {
+        onProgress: (stage, fraction) => {
+          show(stage === 'Fertig' ? 'Fertig!' : `${stage} …`);
+          if (fraction !== undefined) progress.value = fraction;
+        },
+      });
+      download.href = URL.createObjectURL(blob);
+      download.download = 'ganja-farmer-v147-patched.apk';
+      download.hidden = false;
+      show('Fertig! Jetzt herunterladen und installieren.');
+    } catch (err) {
+      console.error(err);
+      show(err instanceof PatchError ? err.message : `Unerwarteter Fehler: ${err.message ?? err}`, true);
+    } finally {
+      progress.hidden = true;
+      busy = false;
+    }
+  }
+
+  $('file').addEventListener('change', (e) => handle(e.target.files[0]));
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    handle(e.dataTransfer.files[0]);
+  });
+</script>
+</body>
+</html>
