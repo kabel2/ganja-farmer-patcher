@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ganja Farmer Patcher</title>
-<meta name="description" content="Biegt die originale Ganja-Farmer-APK auf einen Community-Server um, direkt im Browser.">
+<meta name="description" content="Points the original Ganja Farmer APK to a community server, right in your browser.">
 <style>
   :root {
     --bg: #f4f1e8; --card: #fffdf7; --text: #23261f; --muted: #66695f;
@@ -57,49 +57,48 @@
 <main>
   <h1>🌱 Ganja Farmer Patcher</h1>
   <p class="lead">
-    Der Originalserver von Ganja Farmer ist abgeschaltet. Dieser Patcher stellt
-    deine Original-APK auf einen Community-Server um, damit das Spiel wieder läuft.
-    Alles passiert <strong>in deinem Browser</strong>, die Datei wird nirgendwo hochgeladen.
+    The original Ganja Farmer server has been shut down. This patcher points your
+    original APK to a community server so the game works again.
+    Everything happens <strong>in your browser</strong>, your file is never uploaded anywhere.
   </p>
 
   <section class="card">
-    <h2>1. Original-APK auswählen</h2>
+    <h2>1. Choose the original APK</h2>
     <label class="drop" id="drop">
       <input type="file" id="file" accept=".apk,application/vnd.android.package-archive">
-      <strong>APK hier ablegen oder antippen</strong>
-      <small>Ganja Farmer, Version 147, als einzelne .apk-Datei</small>
+      <strong>Drop the APK here or tap to choose</strong>
+      <small>Ganja Farmer, version 147, as a single .apk file</small>
     </label>
     <div class="status" id="status" aria-live="polite"></div>
     <progress id="progress" max="1" value="0" hidden></progress>
-    <a class="btn" id="download" hidden>⬇ Gepatchte APK herunterladen</a>
+    <a class="btn" id="download" hidden>⬇ Download patched APK</a>
   </section>
 
   <section class="card">
-    <h2>2. Installieren</h2>
+    <h2>2. Install</h2>
     <ol>
-      <li>Falls die alte Original-Version installiert ist: <strong>erst deinstallieren</strong>
-        (die gepatchte APK hat eine andere Signatur).</li>
-      <li>Heruntergeladene APK öffnen und die Installation aus unbekannten Quellen erlauben.</li>
-      <li><strong>Samsung:</strong> Falls die Installation blockiert wird, unter
-        Einstellungen → Sicherheit den <em>Auto Blocker</em> vorübergehend ausschalten.</li>
-      <li>Auf neueren Geräten erscheint beim Start ein Hinweis
-        „This app isn't 16 KB compatible…". Einfach mit <em>OK</em> bestätigen, das Spiel
-        läuft dann im Kompatibilitätsmodus.</li>
+      <li>If the old original version is installed, <strong>uninstall it first</strong>
+        (the patched APK has a different signature).</li>
+      <li>Open the downloaded APK and allow installing from unknown sources.</li>
+      <li><strong>Samsung:</strong> If the installation is blocked, temporarily turn off
+        <em>Auto Blocker</em> under Settings → Security.</li>
+      <li>On newer devices a notice saying “This app isn't 16 KB compatible…” appears
+        at startup. Just tap <em>OK</em>, the game then runs in compatibility mode.</li>
     </ol>
   </section>
 
   <section class="card">
-    <h2>Gut zu wissen</h2>
+    <h2>Good to know</h2>
     <ul>
-      <li>Läuft ab Android 7.</li>
-      <li>Dein Spielstand liegt auf dem Server und gehört zu deiner Installation.
-        Updates mit diesem Patcher behalten ihn, eine Neuinstallation startet ein neues Spiel.</li>
+      <li>Requires Android 7 or newer.</li>
+      <li>Your progress is stored on the server and tied to your installation.
+        Updating with this patcher keeps it, a fresh install starts a new game.</li>
     </ul>
   </section>
 
   <footer>
-    Inoffizielles Fanprojekt, nicht verbunden mit den Entwicklern von Ganja Farmer.
-    Es wird keine APK bereitgestellt, nur deine eigene Datei verändert.
+    Unofficial fan project, not affiliated with the developers of Ganja Farmer.
+    No APK is distributed here, the patcher only modifies your own file.
   </footer>
 </main>
 
@@ -116,7 +115,7 @@
   }
 
   if (!window.isSecureContext || !crypto.subtle || typeof CompressionStream === 'undefined') {
-    show('Dein Browser ist zu alt für den Patcher. Bitte einen aktuellen Chrome, Firefox oder Safari verwenden.', true);
+    show('Your browser is too old for the patcher. Please use a current Chrome, Firefox or Safari.', true);
   }
 
   async function handle(file) {
@@ -127,20 +126,20 @@
     progress.hidden = false;
     progress.value = 0;
     try {
-      show(`${file.name} (${(file.size / 1e6).toFixed(1)} MB) wird gelesen …`);
+      show(`Reading ${file.name} (${(file.size / 1e6).toFixed(1)} MB) …`);
       const blob = await patchApk(await file.arrayBuffer(), {
         onProgress: (stage, fraction) => {
-          show(stage === 'Fertig' ? 'Fertig!' : `${stage} …`);
+          show(stage === 'Done' ? 'Done!' : `${stage} …`);
           if (fraction !== undefined) progress.value = fraction;
         },
       });
       download.href = URL.createObjectURL(blob);
       download.download = 'ganja-farmer-v147-patched.apk';
       download.hidden = false;
-      show('Fertig! Jetzt herunterladen und installieren.');
+      show('Done! Now download and install it.');
     } catch (err) {
       console.error(err);
-      show(err instanceof PatchError ? err.message : `Unerwarteter Fehler: ${err.message ?? err}`, true);
+      show(err instanceof PatchError ? err.message : `Unexpected error: ${err.message ?? err}`, true);
     } finally {
       progress.hidden = true;
       busy = false;

@@ -101,16 +101,16 @@ function readZip(buf) {
   for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 0xffff); i--) {
     if (dv.getUint32(i, true) === SIG_EOCD) { eocd = i; break; }
   }
-  if (eocd < 0) throw new PatchError('Das ist keine gültige APK-Datei (kein ZIP-Archiv).');
+  if (eocd < 0) throw new PatchError('This is not a valid APK file (not a ZIP archive).');
   const count = dv.getUint16(eocd + 10, true);
   const cdOff = dv.getUint32(eocd + 16, true);
-  if (count === 0xffff || cdOff === 0xffffffff) throw new PatchError('ZIP64-Archive werden nicht unterstützt.');
+  if (count === 0xffff || cdOff === 0xffffffff) throw new PatchError('ZIP64 archives are not supported.');
 
   const dec = new TextDecoder();
   const entries = [];
   let p = cdOff;
   for (let i = 0; i < count; i++) {
-    if (dv.getUint32(p, true) !== SIG_CENTRAL) throw new PatchError('Beschädigtes ZIP-Verzeichnis.');
+    if (dv.getUint32(p, true) !== SIG_CENTRAL) throw new PatchError('Corrupt ZIP central directory.');
     const nameLen = dv.getUint16(p + 28, true);
     const extraLen = dv.getUint16(p + 30, true);
     const commentLen = dv.getUint16(p + 32, true);
@@ -131,7 +131,7 @@ function readZip(buf) {
     };
     e.name = dec.decode(e.nameBytes);
     const lo = e.localOff;
-    if (dv.getUint32(lo, true) !== SIG_LOCAL) throw new PatchError(`Beschädigter ZIP-Eintrag: ${e.name}`);
+    if (dv.getUint32(lo, true) !== SIG_LOCAL) throw new PatchError(`Corrupt ZIP entry: ${e.name}`);
     const dataOff = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
     e.data = buf.subarray(dataOff, dataOff + e.csize);
     entries.push(e);
@@ -226,7 +226,7 @@ function writeZip(entries) {
 function patchMetadata(m, newUrl) {
   const dv = view(m);
   if (m.length < 24 || dv.getUint32(0, true) !== METADATA_MAGIC) {
-    throw new PatchError('global-metadata.dat hat ein unbekanntes Format.');
+    throw new PatchError('global-metadata.dat has an unknown format.');
   }
   // header: stringLiteralOffset/Size (entries {uint32 length, int32 dataIndex}),
   //         stringLiteralDataOffset (UTF-8 blob)
@@ -235,19 +235,19 @@ function patchMetadata(m, newUrl) {
   const dataOff = dv.getUint32(16, true);
   const old = enc.encode(OLD_URL);
   const neu = enc.encode(newUrl);
-  if (neu.length > old.length) throw new PatchError(`Die neue URL ist zu lang (max. ${old.length} Zeichen).`);
+  if (neu.length > old.length) throw new PatchError(`The new URL is too long (max. ${old.length} characters).`);
 
   let hit = -1;
   for (let e = litOff; e + 8 <= litOff + litSize; e += 8) {
     if (dv.getUint32(e, true) !== old.length) continue;
     const at = dataOff + dv.getInt32(e + 4, true);
     if (m.subarray(at, at + old.length).every((c, i) => c === old[i])) {
-      if (hit >= 0) throw new PatchError('Server-URL kommt mehrfach vor, unerwartete APK-Version.');
+      if (hit >= 0) throw new PatchError('The server URL occurs more than once, unexpected APK version.');
       hit = e;
     }
   }
   if (hit < 0) {
-    throw new PatchError('Server-URL nicht gefunden. Ist das die originale, ungepatchte Ganja-Farmer-APK (v147)?');
+    throw new PatchError('Server URL not found. Is this the original, unpatched Ganja Farmer APK (v147)?');
   }
   // the blob is packed: write the shorter URL into the old footprint, zero the
   // rest and shorten the length field, so the following literal stays untouched
@@ -315,23 +315,23 @@ async function signingBlock(body, cd, eocd, onChunk) {
  */
 export async function patchApk(apk, { url = DEFAULT_URL, onProgress } = {}) {
   const buf = apk instanceof Uint8Array ? apk : new Uint8Array(apk);
-  onProgress?.('APK lesen');
+  onProgress?.('Reading APK');
   const entries = readZip(buf);
 
   if (!entries.some((e) => e.name === 'AndroidManifest.xml')) {
     if (entries.some((e) => e.name.endsWith('.apk'))) {
-      throw new PatchError('Das ist ein XAPK/APKS-Paket. Bitte die einzelne APK-Datei (v147) verwenden.');
+      throw new PatchError('This is an XAPK/APKS bundle. Please use the single APK file (v147).');
     }
-    throw new PatchError('Das ist keine Android-App (AndroidManifest.xml fehlt).');
+    throw new PatchError('This is not an Android app (AndroidManifest.xml is missing).');
   }
   const meta = entries.find((e) => e.name === METADATA);
-  if (!meta) throw new PatchError('Keine Unity-IL2CPP-App, global-metadata.dat fehlt. Ist das Ganja Farmer?');
+  if (!meta) throw new PatchError('Not a Unity IL2CPP app (global-metadata.dat is missing). Is this Ganja Farmer?');
 
-  onProgress?.('Server-URL ersetzen');
+  onProgress?.('Replacing server URL');
   let m;
   if (meta.method === 8) m = await transform(meta.data, new DecompressionStream('deflate-raw'));
   else if (meta.method === 0) m = meta.data.slice();
-  else throw new PatchError(`Unbekannte Kompression (${meta.method}) für global-metadata.dat.`);
+  else throw new PatchError(`Unknown compression (${meta.method}) for global-metadata.dat.`);
   patchMetadata(m, url);
   meta.data = await transform(m, new CompressionStream('deflate-raw'));
   meta.method = 8;
@@ -342,13 +342,13 @@ export async function patchApk(apk, { url = DEFAULT_URL, onProgress } = {}) {
   // the v2/v3/stamp blocks vanish with the rebuild anyway
   const isOldSig = (n) => n === 'META-INF/MANIFEST.MF' || n === 'stamp-cert-sha256'
     || /^META-INF\/[^/]+\.(SF|RSA|DSA|EC)$/i.test(n);
-  onProgress?.('APK neu packen');
+  onProgress?.('Repacking APK');
   const { body, cd, eocd } = writeZip(entries.filter((e) => !isOldSig(e.name)));
 
-  onProgress?.('Signieren', 0);
-  const block = await signingBlock(body, cd, eocd, (f) => onProgress?.('Signieren', f));
+  onProgress?.('Signing', 0);
+  const block = await signingBlock(body, cd, eocd, (f) => onProgress?.('Signing', f));
   view(eocd).setUint32(16, body.length + block.length, true);
 
-  onProgress?.('Fertig', 1);
+  onProgress?.('Done', 1);
   return new Blob([body, block, cd, eocd], { type: 'application/vnd.android.package-archive' });
 }

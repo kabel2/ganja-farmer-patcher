@@ -2,56 +2,55 @@
 
 **https://kabel2.github.io/ganja-farmer-patcher/**
 
-Der Originalserver von Ganja Farmer ist abgeschaltet, seitdem startet das Spiel
-nicht mehr. Dieser Patcher stellt die originale APK (Version 147) auf einen
-Community-Server um. Alles passiert im Browser: Die APK wird nicht hochgeladen,
-und hier wird keine APK bereitgestellt.
+The original Ganja Farmer server has been shut down, and the game no longer
+starts without it. This patcher points the original APK (version 147) to a
+community server. Everything happens in your browser: the APK is never uploaded,
+and no APK is distributed here.
 
-## Benutzung
+## Usage
 
-1. Seite öffnen, die originale `.apk` (v147, keine XAPK) auswählen.
-2. Gepatchte APK herunterladen und installieren (ab Android 7).
-   Eine vorhandene Original-Installation vorher deinstallieren.
-3. Auf Geräten mit 16-KB-Speicherseiten erscheint beim Start ein
-   Kompatibilitätshinweis, einfach mit *OK* bestätigen.
+1. Open the page and choose the original `.apk` (v147, not an XAPK).
+2. Download the patched APK and install it (Android 7 or newer).
+   Uninstall an existing original installation first.
+3. On devices with 16 KB memory pages a compatibility notice appears at
+   startup. Just tap *OK*.
 
-Kommandozeile (Node ≥ 21): `node cli.mjs original.apk gepatcht.apk [server-url]`
+Command line (Node ≥ 21): `node cli.mjs original.apk patched.apk [server-url]`
 
-## Wie es funktioniert
+## How it works
 
-| Datei | Inhalt |
+| File | Contents |
 |---|---|
-| `index.html` | Oberfläche |
-| `apkpatch.js` | Patcher, ohne Abhängigkeiten, läuft in Browser und Node |
-| `key.js`, `keys/` | Signierschlüssel (absichtlich öffentlich, s. u.) |
-| `cli.mjs` | Kommandozeilen-Variante |
+| `index.html` | User interface |
+| `apkpatch.js` | The patcher, no dependencies, runs in the browser and in Node |
+| `key.js`, `keys/` | Signing key (public on purpose, see below) |
+| `cli.mjs` | Command line version |
 
-1. In `assets/bin/Data/Managed/Metadata/global-metadata.dat` (IL2CPP-Metadaten)
-   wird der String-Literal-Eintrag mit der alten Server-URL über den
-   Metadata-Header gesucht, durch die neue URL ersetzt und das Längenfeld angepasst.
-2. Die APK wird neu aufgebaut: Alle anderen Einträge werden unverändert kopiert,
-   alte Signaturdateien entfernt, unkomprimierte Einträge wie bei `zipalign -p`
-   ausgerichtet.
-3. Signiert wird mit APK Signature Scheme v2, im selben Layout wie `apksigner`
-   (Signaturblock und Central Directory auf 4096-Byte-Grenzen, ohne die alte
-   `stamp-cert-sha256`). Mit dem ersten, abweichenden Layout griff auf einem
-   16-KB-Gerät der Kompatibilitätsmodus nicht und das Spiel brach mit
-   „Not enough storage space“ ab.
+1. In `assets/bin/Data/Managed/Metadata/global-metadata.dat` (IL2CPP metadata)
+   the string literal holding the old server URL is located via the metadata
+   header, replaced with the new URL, and its length field is updated.
+2. The APK is rebuilt: all other entries are copied unchanged, old signature
+   files are removed, and uncompressed entries are aligned like `zipalign -p`.
+3. It is signed with APK Signature Scheme v2 using the same layout as
+   `apksigner` (signing block and central directory on 4096-byte boundaries,
+   stale `stamp-cert-sha256` dropped). With the first, different layout the
+   compatibility mode did not kick in on a 16 KB device and the game aborted
+   with “Not enough storage space”.
 
-Browser und Node erzeugen bytegleiche Ergebnisse.
+The browser and Node produce byte-identical results.
 
-## Der Schlüssel
+## The key
 
-`CN=Ganja Farmer Patcher`, RSA 2048, SHA-256-Fingerprint
+`CN=Ganja Farmer Patcher`, RSA 2048, SHA-256 fingerprint
 `35:AD:36:5D:4B:59:D7:1B:88:F2:37:B1:20:61:80:B8:DA:6D:D8:5B:78:AA:B4:27:40:64:E8:A0:75:15:A9:21`.
 
-Er ist bewusst öffentlich. Er sorgt nur dafür, dass alle gepatchten APKs dieselbe
-Signatur tragen, damit sich spätere Versionen ohne Deinstallation (und damit ohne
-Verlust des Spielstands) installieren lassen. Vertrauen stiftet er keines.
-Ein neuer Schlüssel würde genau diese Updates brechen.
+It is public on purpose. Its only job is to give every patched APK the same
+signature, so later versions install over earlier ones without uninstalling
+(and thus without losing your progress). It does not establish any trust.
+Switching to a new key would break exactly these updates.
 
-## Rechtliches
+## Legal
 
-Inoffizielles Fanprojekt, nicht mit den Entwicklern von Ganja Farmer verbunden.
-Es wird kein Code oder Inhalt des Spiels verbreitet, der Patcher verändert nur
-die APK, die du selbst mitbringst.
+Unofficial fan project, not affiliated with the developers of Ganja Farmer.
+No game code or content is distributed; the patcher only modifies the APK you
+bring yourself.
